@@ -5,6 +5,7 @@ namespace App;
 use Illuminate\Support\Facades\Storage;
 use GuzzleHttp\Client;
 use Zalo\Builder\MessageBuilder;
+use Automattic\WooCommerce\Client as WClient;
 
 class Message
 {
@@ -34,12 +35,22 @@ class LBot
     public $timestamp;
     public $message;
     private $request;
+    public $wc;
+    public $step = 0;
 
     public function __construct($request)
     {
         $this->sender = $request->input('sender');
         $this->message = $request->input('message.text');
         Storage::put('file.json', $this->message);
+        $this->wc = new WClient(
+            'https://dogohanam.net', 
+            'ck_0c4900ca45dbdacd91ccf33e7ec9504fb481aba4', 
+            'cs_1d7d5d12b8682f7805612d975ef797877b3b86a2',
+            [
+                'version' => 'wc/v3',
+            ]
+        );
     }
 
     public function send_text($id, $text)
@@ -110,10 +121,40 @@ class LBot
         // $result = $response->getDecodedBody(); // result
     }
 
+    public function sendButtons($id, $text, $buttons)
+    {
+        $msgBuilder = new MessageBuilder('text');
+        $msgBuilder->withUserId($id);
+        $msgBuilder->withText($text);
+        foreach ($buttons as $item) {
+            $actionQueryHide = $msgBuilder->buildActionQueryHide('#'.$item->id); // build action query hide
+            $msgBuilder->withButton($item->name, $actionQueryHide);
+        }
+        $msgText = $msgBuilder->build();
+        Storage::put('file1.json', var_dump($msgText));
+        return $this->send($msgText);
+    }
+
     public function hear($text, $callback)
     {
         if ($this->message ==$text) {
             call_user_func($callback, $this);
         }
+    }
+    public function testwc()
+    {
+        $list = $this->wc->get('products/categories', ['per_page' => 100]);
+        $step = array_chunk($list, 5);
+        return $list;
+    }
+    public function dsSanPham()
+    {
+        $this->reply('Mời chọn danh mục sản phẩm');
+        $list = $this->wc->get('products/categories', ['per_page' => 100]);
+        $step = array_chunk($list, 5);
+        foreach ($step as $items) {
+            $this->sendButtons($this->sender['id'], ' ', $items);
+        }
+        return $list;
     }
 }

@@ -28,17 +28,20 @@ Route::get('/test', function (Request $request) {
     $zalo = new LBot($request);
     return $zalo->test();
 });
+Route::get('/test1', function (Request $request) {
+    $zalo = new LBot($request);
+    return $zalo->testwc();
+});
 Route::post('/', function(Request $request) {
     $input = json_decode($request->getContent(), true);
     // Storage::put('file.json', $request->input('app_id'));
     $zalo = new LBot($request);
-    $res = '';
     // $res = $zalo->reply('hello');
-    $zalo->hear('hello', function ($bot)
+    $zalo->hear('Hi', function ($bot)
     {
-        $res = $bot->reply('1');
+        $res = $bot->dsSanPham();
     });
-    return 'done';
+    return '$res';
 });
 
 // Route::get('/test', function (Request $request) {
