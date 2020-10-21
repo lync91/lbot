@@ -4,6 +4,7 @@ namespace App;
 
 use Illuminate\Support\Facades\Storage;
 use GuzzleHttp\Client;
+use Zalo\Builder\MessageBuilder;
 
 class Message
 {
@@ -20,7 +21,7 @@ class Message
     }
 }
 
-class Zalo
+class LBot
 {
     CONST TOKKEN = 'ek6DD1NtP4MYvuWx5FPdIg7bYZGIw6OwqwVMEHdpHWlKaQi0PTmh9PAEnGnYuLuQoOR3BJRFLrw1sT9mG9XFRvBNnar1dd1CjVZYULcJ15UqXPLO2iDpHzYqodGaprO1rAMy2o7LEddmmjLU5wGwNjZehdidWZzVpysvHWw2Kp3vszau2A9_JV_RupWXj7PCxjxDKrgINcosoEbXPxjVIhFIorD2aqLddeFRSblOT0s9f9WdRi4gLwdHb5f2fn5obi-QKc2P56UUoub3RhXlPwAfmKLGwrDtEKg68zz65-nWGW';
     CONST URL = 'https://openapi.zalo.me/v2.0/oa/message?access_token=';
@@ -38,6 +39,14 @@ class Zalo
         $this->data = $input;
         $this->sender = $input['sender'];
         $this->message = new Message($input['message'], $input['event_name']);
+    }
+
+    public function create_Text_button($text, $buttons, $id = '494021888309207992')
+    {
+        $msgBuilder = new MessageBuilder($text);
+        $msgBuilder->withText($text);
+        $mes = $msgBuilder->build();
+        return $mes;
     }
 
     public function send_text($id, $text)
@@ -59,9 +68,24 @@ class Zalo
             return $response_data;
         }
     }
+    public function send($mes)
+    {
+        $client = new Client();
+        $res = $client->request('POST', self::URL.self::TOKKEN, [
+            'json' => $mes
+        ]);
+    
+        if ($res->getStatusCode() == 200) { // 200 OK
+            $response_data = $res->getBody()->getContents();
+            return $response_data;
+        }
+    }
     public function reply($text)
     {
-        return $this->send_text($this->sender['id'], $text);
+        $msgBuilder = new MessageBuilder($text);
+        $msgBuilder->withText($text);
+        $mes = $msgBuilder->build();
+        return $mes;
     }
     public function hear($text, $callback)
     {
