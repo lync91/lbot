@@ -33,20 +33,13 @@ class LBot
     public $event_name;
     public $timestamp;
     public $message;
+    private $request;
 
-    public function __construct($input)
+    public function __construct($request)
     {
-        $this->data = $input;
-        $this->sender = $input['sender'];
-        $this->message = new Message($input['message'], $input['event_name']);
-    }
-
-    public function create_Text_button($text, $buttons, $id = '494021888309207992')
-    {
-        $msgBuilder = new MessageBuilder($text);
-        $msgBuilder->withText($text);
-        $mes = $msgBuilder->build();
-        return $mes;
+        $this->sender = $request->input('sender');
+        $this->message = $request->input('message.text');
+        Storage::put('file.json', $this->message);
     }
 
     public function send_text($id, $text)
@@ -68,6 +61,11 @@ class LBot
             return $response_data;
         }
     }
+    public function reply($text)
+    {
+        return $this->send_text($this->sender['id'], $text);
+    }
+
     public function send($mes)
     {
         $client = new Client();
@@ -80,16 +78,41 @@ class LBot
             return $response_data;
         }
     }
-    public function reply($text)
+
+    public function test()
     {
-        $msgBuilder = new MessageBuilder($text);
-        $msgBuilder->withText($text);
-        $mes = $msgBuilder->build();
-        return $mes;
+        // build data
+        $msgBuilder = new MessageBuilder('text');
+        $msgBuilder->withUserId('2036513421776710115');
+        $msgBuilder->withText('Message Text');
+
+        // add buttons (only support 5 buttons - optional)
+        $actionOpenUrl = $msgBuilder->buildActionOpenURL('https://wwww.google.com'); // build action open link
+        $msgBuilder->withButton('Open Link', $actionOpenUrl);
+
+        $actionQueryShow = $msgBuilder->buildActionQueryShow('query_show'); // build action query show
+        $msgBuilder->withButton('Query Show', $actionQueryShow);
+
+        $actionQueryHide = $msgBuilder->buildActionQueryHide('query_hide'); // build action query hide
+        $msgBuilder->withButton('Query Hide', $actionQueryHide);
+
+        $actionOpenPhone = $msgBuilder->buildActionOpenPhone('0919018791'); // build action open phone
+        $msgBuilder->withButton('Open Phone', $actionOpenPhone);
+
+        $actionOpenSMS = $msgBuilder->buildActionOpenSMS('0919018791', 'sms text'); // build action open sms
+        $msgBuilder->withButton('Open SMS', $actionOpenSMS);
+
+        $msgText = $msgBuilder->build();
+        return $this->send($msgText);
+        // return $msgText;
+        // send request
+        // $response = $zalo->post(ZaloEndpoint::API_OA_SEND_MESSAGE, $accessToken, $msgText);
+        // $result = $response->getDecodedBody(); // result
     }
+
     public function hear($text, $callback)
     {
-        if ($this->message->text ==$text) {
+        if ($this->message ==$text) {
             call_user_func($callback, $this);
         }
     }

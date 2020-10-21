@@ -34,12 +34,11 @@ Route::post('/', function(Request $request) {
     $zalo = new LBot($request);
     $res = '';
     // $res = $zalo->reply('hello');
-    $res = $zalo->reply('1');
-    // $zalo->hear('hello', function ($bot)
-    // {
-    //     $res = $bot->reply('1');
-    // });
-    return $res;
+    $zalo->hear('hello', function ($bot)
+    {
+        $res = $bot->reply('1');
+    });
+    return 'done';
 });
 
 // Route::get('/test', function (Request $request) {
