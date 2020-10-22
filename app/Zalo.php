@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Storage;
 use GuzzleHttp\Client;
 use Zalo\Builder\MessageBuilder;
 use Automattic\WooCommerce\Client as WClient;
+use Illuminate\Support\Facades\DB;
 
 class Message
 {
@@ -51,6 +52,30 @@ class LBot
                 'version' => 'wc/v3',
             ]
         );
+        $this->initTempl();
+        if ($this->step == 1) {
+            if (is_numeric($this->message)) {
+                $lsp = $this->getLoaiSanPham($this->message);
+                $this->reply('Bạn đã chọn nhập loại sản phẩm "'.$lsp->name.'"');
+                $list = [[
+                    "id" => "Sắt",
+                    "name" => "Sắt"
+                ]];
+                $this->sendButtons($this->sender['id'], 'Hãy chọn loại vật liệu', $list);
+            }
+        }
+    }
+    public function initTempl()
+    {
+        $data = DB::table('templ')->where('step', '<', 5)->get();
+        if (count($data) > 0) {
+            $dt = $data[0];
+            $this->step = $dt->step;
+        } else {
+            $this->step = $dt->step;
+            $this->insertTpl();
+        }
+        return $this->step;
     }
 
     public function send_text($id, $text)
@@ -134,6 +159,19 @@ class LBot
         Storage::put('file1.json', var_dump($msgText));
         return $this->send($msgText);
     }
+    public function sendButtons1($id, $text, $buttons)
+    {
+        $msgBuilder = new MessageBuilder('text');
+        $msgBuilder->withUserId($id);
+        $msgBuilder->withText($text);
+        foreach ($buttons as $item) {
+            $actionQueryHide = $msgBuilder->buildActionQueryHide($item['id']); // build action query hide
+            $msgBuilder->withButton($item->name, $actionQueryHide);
+        }
+        $msgText = $msgBuilder->build();
+        Storage::put('file1.json', var_dump($msgText));
+        return $this->send($msgText);
+    }
 
     public function hear($text, $callback)
     {
@@ -156,5 +194,21 @@ class LBot
             $this->sendButtons($this->sender['id'], ' ', $items);
         }
         return $list;
+    }
+    public function getLoaiSanPham($id)
+    {
+        $lsp = $this->wc->get('products/categories/'.$id);
+        return $lsp;
+    }
+    public function gettempl()
+    {
+        
+    }
+    public function insertTpl()
+    {
+        $data = DB::table('templ')->insert([
+            ['step' => 1]
+        ]);
+        return '$data';
     }
 }
