@@ -33,15 +33,11 @@ Route::get('/test1', function (Request $request) {
     return $zalo->testwc();
 });
 Route::post('/', function(Request $request) {
-    $input = json_decode($request->getContent(), true);
-    // Storage::put('file.json', $request->input('app_id'));
+    // $input = json_decode($request->input('message'), true);
+    // Storage::put('file.json', serialize($request->input('message.attachments')));
     $zalo = new LBot($request);
     // $res = $zalo->reply('hello');
-    $zalo->hear('Hi', function ($bot)
-    {
-        $res = $bot->dsSanPham();
-    });
-    return '$res';
+    return serialize($zalo);
 });
 
 // Route::get('/test', function (Request $request) {

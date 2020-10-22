@@ -16,14 +16,15 @@ class CreateTemplTable extends Migration
         Schema::dropIfExists('templ');
         Schema::create('templ', function (Blueprint $table) {
             $table->increments('id');
-            $table->tinyInteger('step');
+            $table->tinyInteger('step')->nullable(true);
             $table->tinyInteger('loaihang')->nullable(true);
             $table->string('tenhang')->nullable(true);
             $table->string('chatlieu')->nullable(true);
             $table->string('quycach')->nullable(true);
             $table->string('gia')->nullable(true);
-            $table->tinyInteger('giakm')->nullable(true);
-            $table->tinyInteger('soluong')->nullable(true);
+            $table->string('giakm')->nullable(true);
+            $table->string('soluong')->nullable(true);
+            $table->string('hinhanh')->nullable(true);
             $table->timestamps();
 
         });

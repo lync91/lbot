@@ -39,12 +39,25 @@ class LBot
     public $wc;
     public $step = 0;
     public $id;
+    public $loaihang;
+    public $tenhang;
+    public $chatlieu;
+    public $quycach;
+    public $gia;
+    public $soluong;
+    public $hinhanh;
+    public $attachments;
 
     public function __construct($request)
     {
+
         $this->sender = $request->input('sender');
         $this->message = $request->input('message.text');
-        Storage::put('file.json', $this->message);
+        $this->event_name = $request->input('event_name');
+        if ($this->event_name == 'user_send_image') {
+            $this->attachments = $request->input('message.attachments');
+        }
+        Storage::put('file11.json', $this->message);
         $this->wc = new WClient(
             'https://dogohanam.net', 
             'ck_0c4900ca45dbdacd91ccf33e7ec9504fb481aba4', 
@@ -60,8 +73,10 @@ class LBot
                 $this->updateTempl(['loaihang' => $lsp->id]);
                 $this->updateTempl(['tenhang' => $lsp->name]);
                 $this->reply('Bạn đã chọn nhập loại sản phẩm "'.$lsp->name.'"');
-                $this->sendSimpleButtons($this->sender['id'], 'Hãy chọn loại vật liệu hoặc nhập vật liệu khác', ['Sắt', 'Inox', 'Gỗ tự nhiên', 'Gỗ ghép', 'Ghỗ ép']);
                 $this->setStep(2);
+                $this->sendSimpleButtons($this->sender['id'], 'Hãy chọn loại vật liệu hoặc nhập vật liệu khác', ['Sắt', 'Inox', 'Gỗ tự nhiên', 'Gỗ ghép', 'Ghỗ ép']);
+            } elseif ($this->message == '#') {
+                $this->dsSanPham();
             }
         } elseif ($this->step == 2) {
             $this->updateTempl(['chatlieu' => $this->message]);
@@ -77,21 +92,37 @@ class LBot
                 $this->reply('Mời gửi ảnh sản phẩm');
                 $this->setStep(5);
             }
+        } elseif ($this->step == 5) {
+            if ($this->event_name == 'user_send_image') {
+                $list = $this->attachments;
+                foreach ($list as &$value) {
+                    $value = ['src' => $value['payload']['url']];
+                    // Storage::put('file.json', serialize($value['payload']['url']));
+                }
+                // Storage::put('file.json', serialize($list));
+                $this->setStep(6);
+                $this->reply('Sản phẩm đã tạo thành công');
+                $this->createProduct($this->tenhang.' '. $this->chatlieu. ' ' .$this->quycach, $this->gia, [['id' => $this->loaihang]], $list);
+            }
         }
     }
     public function initTempl()
     {
-        $data = DB::table('templ')->where('step', '<', 5)->get();
+        $data = DB::table('templ')->where('step', '<', 6)->get();
         if (count($data) > 0) {
             $dt = $data[0];
             $this->step = $dt->step;
             $this->id = $dt->id;
+            $this->loaihang = $dt->loaihang;
+            $this->tenhang = $dt->tenhang;
+            $this->chatlieu = $dt->chatlieu;
+            $this->quycach = $dt->quycach;
+            $this->gia = $dt->gia;
 
         } else {
-            $this->step = $dt->step;
+            $this->step = 1;
             $this->insertTpl();
         }
-        return $this->step;
     }
 
     public function send_text($id, $text)
@@ -168,8 +199,8 @@ class LBot
         $msgBuilder->withUserId($id);
         $msgBuilder->withText($text);
         foreach ($buttons as $item) {
-            $actionQueryHide = $msgBuilder->buildActionQueryHide('#'.$item->id); // build action query hide
-            $msgBuilder->withButton($item->name, $actionQueryHide);
+            $actionQueryShow = $msgBuilder->buildActionQueryShow($item->id); // build action query hide
+            $msgBuilder->withButton($item->name, $actionQueryShow);
         }
         $msgText = $msgBuilder->build();
         Storage::put('file1.json', var_dump($msgText));
@@ -237,7 +268,8 @@ class LBot
         $data = DB::table('templ')->insert([
             ['step' => 1]
         ]);
-        return '$data';
+        $this->id = $data;
+        Storage::put('file.json', serialize($data));
     }
     public function setStep($step)
     {
@@ -248,5 +280,16 @@ class LBot
     {
         DB::table('templ')->where('id', $this->id)
         ->update($items);
+    }
+    public function createProduct($name, $price = null, $cats, $images)
+    {
+        $data = [
+            'name' => $name,
+            'type' => 'simple',
+            'regular_price' => $price,
+            'categories' => $cats,
+            'images' => $images
+        ];
+        return $this->wc->post('products', $data);
     }
 }
