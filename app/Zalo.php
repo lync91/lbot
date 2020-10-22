@@ -38,6 +38,7 @@ class LBot
     private $request;
     public $wc;
     public $step = 0;
+    public $id;
 
     public function __construct($request)
     {
@@ -56,12 +57,25 @@ class LBot
         if ($this->step == 1) {
             if (is_numeric($this->message)) {
                 $lsp = $this->getLoaiSanPham($this->message);
+                $this->updateTempl(['loaihang' => $lsp->id]);
+                $this->updateTempl(['tenhang' => $lsp->name]);
                 $this->reply('Bạn đã chọn nhập loại sản phẩm "'.$lsp->name.'"');
-                $list = [[
-                    "id" => "Sắt",
-                    "name" => "Sắt"
-                ]];
-                $this->sendButtons($this->sender['id'], 'Hãy chọn loại vật liệu', $list);
+                $this->sendSimpleButtons($this->sender['id'], 'Hãy chọn loại vật liệu hoặc nhập vật liệu khác', ['Sắt', 'Inox', 'Gỗ tự nhiên', 'Gỗ ghép', 'Ghỗ ép']);
+                $this->setStep(2);
+            }
+        } elseif ($this->step == 2) {
+            $this->updateTempl(['chatlieu' => $this->message]);
+            $this->sendSimpleButtons($this->sender['id'], 'Mời nhập quy cách', ['80cm', '1m', '1,2m', '1,4m', '1,6m']);
+            $this->setStep(3);
+        } elseif ($this->step == 3) {
+            $this->updateTempl(['quycach' => $this->message]);
+            $this->reply('Mời nhập giá sản phẩm');
+            $this->setStep(4);
+        } elseif ($this->step == 4) {
+            if (is_numeric($this->message)) {
+                $this->updateTempl(['gia' => $this->message]);
+                $this->reply('Mời gửi ảnh sản phẩm');
+                $this->setStep(5);
             }
         }
     }
@@ -71,6 +85,8 @@ class LBot
         if (count($data) > 0) {
             $dt = $data[0];
             $this->step = $dt->step;
+            $this->id = $dt->id;
+
         } else {
             $this->step = $dt->step;
             $this->insertTpl();
@@ -159,17 +175,29 @@ class LBot
         Storage::put('file1.json', var_dump($msgText));
         return $this->send($msgText);
     }
+    public function sendSimpleButtons($id, $text, $buttons)
+    {
+        $msgBuilder = new MessageBuilder('text');
+        $msgBuilder->withUserId($id);
+        $msgBuilder->withText($text);
+        foreach ($buttons as $item) {
+            $actionQueryShow = $msgBuilder->buildActionQueryShow($item); // build action query show
+        $msgBuilder->withButton($item, $actionQueryShow);
+        }
+        $msgText = $msgBuilder->build();
+        Storage::put('file1.json', var_dump($msgText));
+        return $this->send($msgText);
+    }
     public function sendButtons1($id, $text, $buttons)
     {
         $msgBuilder = new MessageBuilder('text');
         $msgBuilder->withUserId($id);
         $msgBuilder->withText($text);
         foreach ($buttons as $item) {
-            $actionQueryHide = $msgBuilder->buildActionQueryHide($item['id']); // build action query hide
-            $msgBuilder->withButton($item->name, $actionQueryHide);
+            $actionQueryShow = $msgBuilder->buildActionQueryShow($item); // build action query show
+            $msgBuilder->withButton($item);
         }
         $msgText = $msgBuilder->build();
-        Storage::put('file1.json', var_dump($msgText));
         return $this->send($msgText);
     }
 
@@ -210,5 +238,15 @@ class LBot
             ['step' => 1]
         ]);
         return '$data';
+    }
+    public function setStep($step)
+    {
+        DB::table('templ')->where('id', $this->id)
+        ->update(['step' => $step]);
+    }
+    public function updateTempl($items)
+    {
+        DB::table('templ')->where('id', $this->id)
+        ->update($items);
     }
 }
